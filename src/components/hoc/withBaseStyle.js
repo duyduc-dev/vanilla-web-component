@@ -3,7 +3,7 @@ function styleObjectToCss(styleObj) {
     .map(([prop, value]) => {
       const kebabProp = prop.replace(
         /[A-Z]/g,
-        (match) => '-' + match.toLowerCase(),
+        (match) => '-' + match.toLowerCase()
       );
       return `${kebabProp}: ${value};`;
     })
@@ -31,7 +31,7 @@ function generateCssFromStyleObject(styleObj, selector = ':host') {
   }
 
   for (const [nestedSelector, nestedStyleObj] of Object.entries(
-    nestedSelectors,
+    nestedSelectors
   )) {
     // Combine :host with nested selector, e.g. ':host input'
     const combinedSelector = `${selector} ${nestedSelector}`;
@@ -41,44 +41,55 @@ function generateCssFromStyleObject(styleObj, selector = ':host') {
   return css;
 }
 
+const resetStyle = {
+  '*': {
+    margin: 0,
+    padding: 0,
+    boxSizing: 'border-box',
+    fontFamily: 'sans-serif',
+  },
+};
+
 /**
  *
  * @param {BaseComponent} WrappedComponent
  * @param baseStyle
  * @returns {BaseComponent}
  */
-const withBaseStyle = (WrappedComponent, baseStyle = {}) => {
-  return class extends WrappedComponent {
-    constructor(...args) {
-      super(...args);
-      this.baseStyle = baseStyle;
-    }
-
-    onRendered() {
-      super.onRendered?.();
-      this.applyBaseStyle();
-    }
-
-    applyBaseStyle() {
-      // Apply direct inline styles on host (only non-nested keys)
-      for (const [key, value] of Object.entries(this.baseStyle)) {
-        if (typeof value !== 'object') {
-          this.style[key] = value;
-        }
+const withBaseStyle =
+  (baseStyle = {}) =>
+  (WrappedComponent, reset = true) => {
+    return class extends WrappedComponent {
+      constructor(...args) {
+        super(...args);
+        this.baseStyle = Object.assign({}, reset ? resetStyle : {}, baseStyle);
       }
 
-      if (this.shadowRoot && Object.keys(this.baseStyle).length > 0) {
-        const css = generateCssFromStyleObject(this.baseStyle);
+      onRendered() {
+        super.onRendered?.();
+        this.applyBaseStyle();
+      }
 
-        if (!this.shadowRoot.querySelector('style[data-base-style]')) {
-          const styleTag = document.createElement('style');
-          styleTag.setAttribute('data-base-style', 'true');
-          styleTag.textContent = css;
-          this.shadowRoot.appendChild(styleTag);
+      applyBaseStyle() {
+        // Apply direct inline styles on host (only non-nested keys)
+        for (const [key, value] of Object.entries(this.baseStyle)) {
+          if (typeof value !== 'object') {
+            this.style[key] = value;
+          }
+        }
+
+        if (this.shadowRoot && Object.keys(this.baseStyle).length > 0) {
+          const css = generateCssFromStyleObject(this.baseStyle);
+
+          if (!this.shadowRoot.querySelector('style[data-base-style]')) {
+            const styleTag = document.createElement('style');
+            styleTag.setAttribute('data-base-style', 'true');
+            styleTag.textContent = css;
+            this.shadowRoot.appendChild(styleTag);
+          }
         }
       }
-    }
+    };
   };
-};
 
 export default withBaseStyle;

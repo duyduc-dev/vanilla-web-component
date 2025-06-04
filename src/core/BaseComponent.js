@@ -36,7 +36,7 @@ export default class BaseComponent extends HTMLElement {
     }
 
     // Initialize state management
-    this._state = { ...this._config.initialState };
+    this.state = { ...this._config.initialState };
     this._boundEvents = new Map();
     this._eventBindings = [];
 
@@ -99,7 +99,7 @@ export default class BaseComponent extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue !== newValue) {
       // Update internal state to match attribute
-      this._state[name] = this._parseAttributeValue(newValue);
+      this.state[name] = this._parseAttributeValue(newValue);
 
       // Call user-defined attribute changed hook if it exists
       if (typeof this.onAttributeChanged === 'function') {
@@ -119,7 +119,7 @@ export default class BaseComponent extends HTMLElement {
    */
   _parseAttributeValue(value) {
     if (value === null) return null;
-    if (value === 'true') return true;
+    if (value === 'true' || value === '') return true;
     if (value === 'false') return false;
     if (value === 'null') return null;
     if (value === 'undefined') return undefined;
@@ -148,8 +148,8 @@ export default class BaseComponent extends HTMLElement {
    */
   setState(newState, shouldRender = true) {
     // Update state
-    const prevState = { ...this._state };
-    this._state = { ...this._state, ...newState };
+    const prevState = { ...this.state };
+    this.state = { ...this.state, ...newState };
 
     // Re-render the component if needed
     if (shouldRender) {
@@ -158,27 +158,11 @@ export default class BaseComponent extends HTMLElement {
 
     // Call user-defined state changed hook if it exists
     if (typeof this.onStateChanged === 'function') {
-      this.onStateChanged(prevState, this._state);
+      this.onStateChanged(prevState, this.state);
     }
   }
 
-  /**
-   * Get current component state
-   * @returns {Object} Current state
-   */
-  getState() {
-    return { ...this._state };
-  }
 
-  /**
-   * Get value of a specific state property
-   * @param {string} key - State property name
-   * @param {any} defaultValue - Default value if property doesn't exist
-   * @returns {any} State value
-   */
-  getStateValue(key, defaultValue = null) {
-    return key in this._state ? this._state[key] : defaultValue;
-  }
 
   /**
    * Get attribute value with type conversion
@@ -189,6 +173,15 @@ export default class BaseComponent extends HTMLElement {
   getAttributeValue(name, defaultValue = null) {
     if (!this.hasAttribute(name)) return defaultValue;
     return this._parseAttributeValue(this.getAttribute(name));
+  }
+
+  getAttrs() {
+    return this.attributes
+      ? [...this.attributes].reduce((acc, attr) => {
+          acc[attr.name] = this._parseAttributeValue(attr.value);
+          return acc;
+        }, {})
+      : {};
   }
 
   /**
@@ -231,7 +224,7 @@ export default class BaseComponent extends HTMLElement {
 
     // Check if we already have a bound version of this handler
     const existingBinding = [...this._boundEvents.values()].find(
-      (binding) => binding.bindingKey === bindingKey,
+      (binding) => binding.bindingKey === bindingKey
     );
 
     if (existingBinding) {
